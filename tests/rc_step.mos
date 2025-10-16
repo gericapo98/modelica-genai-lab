@@ -1,0 +1,47 @@
+// tests/rc_step.mos
+// return non-zero exit if anything is wrong
+
+loadModel(Modelica);
+getErrorString();
+
+ok := loadFile("models/RC_Step.mo");
+if not ok then
+  print("loadFile failed\n");
+  print(getErrorString());
+  exit(10);
+end if;
+
+ok := buildModel(RC_Step);
+if not ok then
+  print("buildModel failed\n");
+  print(getErrorString());
+  exit(11);
+end if;
+
+sim := simulate(RC_Step, startTime=0, stopTime=1, method="dassl", tolerance=1e-6, numberOfIntervals=1000);
+if sim == {} then
+  print("simulate failed\n");
+  print(getErrorString());
+  exit(12);
+end if;
+
+resFile := sim.resultFile;
+// sample capacitor voltage at t=1.0s
+v1 := val(C1.v, 1.0, resFile);
+
+// analytic RC step (V=1): 1 - exp(-t/(R*C))
+R := 1000.0;
+C := 1e-5;
+expected := 1 - exp(-1.0/(R*C));
+
+// numeric check
+err := abs(v1 - expected);
+print("RC_Step: v(1s) = " + String(v1) + "  expected=" + String(expected) + "  err=" + String(err) + "\n");
+
+if err > 1e-3 then
+  print("FAIL: deviation too high (>1e-3)\n");
+  exit(13);
+end if;
+
+print("PASS\n");
+exit(0);
